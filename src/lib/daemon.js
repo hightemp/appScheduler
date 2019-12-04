@@ -14,6 +14,9 @@ module.exports = {
          *  sName: "",
          *  sCommand: "",
          *  sUser: "",
+         *  iUID: 0,
+         *  sGroup: "",
+         *  iGID: 0,
          *  iLastExecuteTimestamp: 0,
          *  iStartAtTimestamp: 0,
          *  sType: "periodicaly", // [ "periodicaly", "mask", "once" ]
@@ -37,6 +40,14 @@ module.exports = {
     {
         fs.writeFileSync(sTasksFilePath, JSON.stringify(this.oTasks));
     },
+    fnRunTask(oTask, oNowMoment)
+    {
+        var oThis = this;
+
+        oTask.iLastExecuteTimestamp = oNowMoment.unix();
+        oThis.fnSaveTasks();
+
+    },
     fnLoop()
     {
         var oThis = this;
@@ -53,52 +64,43 @@ module.exports = {
             try {
                 if (oTask.sUser) {
                     oOptions.uid = userid.uid(oTask.sUser);
+                } else if (oTask.iUID) {
+                    oOptions.uid = oTask.iUID*1;
                 }
             } catch(oError) {
                 console.log(`${oTask.sUser} not found`)
+            }
+
+            try {
+                if (oTask.sGroup) {
+                    oOptions.gid = userid.gid(oTask.sGroup);
+                } else if (oTask.iGID) {
+                    oOptions.gid = oTask.iGID*1;
+                }
+            } catch(oError) {
+                console.log(`${oTask.sGroup} not found`)
             }
 
             if (oTask.sType == "periodicaly") {
                 var oLastExecuteMoment = moment.unix(oTask.iLastExecuteTimestamp);
                 var oNowMoment = moment();
 
-                if (oTask.sPeriod=="secondly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'seconds')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }
-                }
-                if (oTask.sPeriod=="minutly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'minuts')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }                    
-                }
-                if (oTask.sPeriod=="hourly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'hours')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }                   
-                }
-                if (oTask.sPeriod=="dayly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'days')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }
-                }
-                if (oTask.sPeriod=="weekly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'weeks')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }
-                }
-                if (oTask.sPeriod=="monthly") {
-                    if (oNowMoment.diff(oLastExecuteMoment, 'months')>=1) {
-                        oTask.iLastExecuteTimestamp = oNowMoment.unix();
-                        oThis.fnSaveTasks();
-                    }
-                }
+                var aPeriods = [
+                    { sPeriod: "secondly", sUnitOfTime: "seconds" },
+                    { sPeriod: "minutly", sUnitOfTime: "minuts" },
+                    { sPeriod: "hourly", sUnitOfTime: "hours" },
+                    { sPeriod: "dayly", sUnitOfTime: "days" },
+                    { sPeriod: "weekly", sUnitOfTime: "weeks" },
+                    { sPeriod: "monthly", sUnitOfTime: "months" }
+                ];
 
+                aPeriods.forEach((oItem) => {
+                    if (oTask.sPeriod==oItem.sPeriod) {
+                        if (oNowMoment.diff(oLastExecuteMoment, oItem.sUnitOfTime)>=1) {
+                            oThis.fnRunTask(oTask, oNowMoment);
+                        }
+                    }
+                });
                 
                 oTask.iLastExecuteTimestamp = moment().unix();
 

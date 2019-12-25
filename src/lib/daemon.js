@@ -7,6 +7,8 @@ const userid = require('userid');
 
 const sTasksFilePath = './tasks.json';
 
+const {createServer} = require('wss')
+
 module.exports = {
     oTasks: {
         /**
@@ -40,13 +42,22 @@ module.exports = {
     {
         fs.writeFileSync(sTasksFilePath, JSON.stringify(this.oTasks));
     },
-    fnRunTask(oTask, oNowMoment)
+    fnRunTask(oTask, oOptions, oNowMoment)
     {
         var oThis = this;
 
         oTask.iLastExecuteTimestamp = oNowMoment.unix();
         oThis.fnSaveTasks();
 
+        exec(
+            oTask.sCommand, 
+            oOptions, 
+            (oError) => {
+                if (oError) {
+                    console.log('[E] ', oError.toString());
+                }
+            }
+        );
     },
     fnLoop()
     {
@@ -97,7 +108,7 @@ module.exports = {
                 aPeriods.forEach((oItem) => {
                     if (oTask.sPeriod==oItem.sPeriod) {
                         if (oNowMoment.diff(oLastExecuteMoment, oItem.sUnitOfTime)>=1) {
-                            oThis.fnRunTask(oTask, oNowMoment);
+                            oThis.fnRunTask(oTask, oOptions, oNowMoment);
                         }
                     }
                 });
@@ -118,8 +129,39 @@ module.exports = {
 
         setTimeout(oThis.fnLoop, 1000);
     },
-    fnStart()
+    fnStart(oFlags)
     {
+        createServer(
+            (ws) => {
+                // ws.send('welcome!')
+                ws.on('message', (oData) => {
+                    var sCommandJSON = oData.toString();
+
+                    try {
+                        var oCommand = JSON.parse(sCommandJSON);
+                        var oResult = {
+                            sResult: "success"
+                        };
+
+                        if (sCommand=="add_task") {
+                            
+                        }
+                        if (sCommand=="add_task") {
+    
+                        }
+
+                        ws.send(oResult.toString());
+                    } catch (oError) {
+                        console.log(oError.toString());
+                    }
+                })
+            }
+        )
+        .listen(oFlags.p, function () {
+            const {address, port} = this.address() // this is the http[s].Server
+            console.log('listening on http://%s:%d (%s)', /::/.test(address) ? '0.0.0.0' : address, port)
+        });
+
         this.fnLoop();
     }
 }

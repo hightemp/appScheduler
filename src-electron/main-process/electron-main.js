@@ -24,6 +24,7 @@ const cli = parseArgs(`
       --help     show help
       --version  show version
       -d         run as daemon [Default: false]
+      -p         websocket server port [Default: 9090]
  
     Examples
       $ ${sExecutableFileName} -d
@@ -32,7 +33,8 @@ const cli = parseArgs(`
         h: 'help'
     },
     default: {
-        d: false
+        d: false,
+        p: 9090
     }
 });
 
@@ -42,7 +44,7 @@ const cli = parseArgs(`
 if (cli.flags.d) {
   const oDaemon = require('../../src/lib/daemon.js');
 
-  oDaemon.fnStart();
+  oDaemon.fnStart(cli.flags);
 } else {
 
   const oServiceInstaller = require('../../src/lib/install_service.js');
